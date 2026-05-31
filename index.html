@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#6366f1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BatchPro">
+<title>Batch Production Manager</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --surface2: #273449;
+  --border: #334155;
+  --accent: #6366f1;
+  --accent2: #818cf8;
+  --green: #22c55e;
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --card-radius: 16px;
+  --font: 'Nunito', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; background: var(--bg); font-family: var(--font); color: var(--text); }
+
+/* SPLASH */
+#splash {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999;
+  transition: opacity 0.4s;
+}
+#splash .logo { font-size: 64px; margin-bottom: 16px; animation: pulse 1.5s infinite; }
+#splash h1 { font-size: 24px; font-weight: 800; color: var(--accent2); letter-spacing: -0.5px; }
+#splash p { color: var(--muted); font-size: 14px; margin-top: 8px; }
+#splash .dots { display: flex; gap: 8px; margin-top: 32px; }
+#splash .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: bounce 1.2s infinite; }
+#splash .dot:nth-child(2) { animation-delay: 0.2s; }
+#splash .dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@keyframes bounce { 0%,100% { transform: translateY(0); opacity: 0.5; } 50% { transform: translateY(-6px); opacity: 1; } }
+
+/* SETUP SCREEN */
+#setup-screen {
+  position: fixed; inset: 0; background: var(--bg); z-index: 999; overflow-y: auto; padding: 24px 20px;
+  display: none; flex-direction: column;
+}
+.setup-logo { font-size: 48px; text-align: center; margin: 20px 0 8px; }
+.setup-title { text-align: center; font-size: 22px; font-weight: 800; color: var(--accent2); margin-bottom: 4px; }
+.setup-sub { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+.setup-steps { background: var(--surface); border-radius: var(--card-radius); padding: 16px; margin-bottom: 20px; border: 1px solid var(--border); }
+.setup-step { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; }
+.setup-step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; flex-shrink: 0; }
+.setup-step-text { font-size: 14px; color: var(--text); line-height: 1.5; flex: 1; }
+.setup-step-text strong { color: var(--accent2); }
+.url-input-wrap { margin-bottom: 16px; }
+.url-input-wrap label { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.url-input-wrap input { width: 100%; background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--text); font-size: 14px; font-family: var(--font); outline: none; }
+.url-input-wrap input:focus { border-color: var(--accent); }
+.url-input-wrap input::placeholder { color: var(--muted); }
+.btn-primary { width: 100%; padding: 16px; background: var(--accent); border: none; border-radius: 14px; color: white; font-size: 16px; font-weight: 800; font-family: var(--font); cursor: pointer; transition: opacity 0.2s, transform 0.1s; }
+.btn-primary:active { transform: scale(0.97); opacity: 0.9; }
+
+/* APP SHELL */
+#app { height: 100vh; display: flex; flex-direction: column; display: none; }
+#page-area { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 80px; }
+
+/* TOP BAR */
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.topbar-title { font-size: 18px; font-weight: 800; color: var(--text); }
+.topbar-actions { display: flex; gap: 8px; }
+.icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: background 0.15s; }
+.icon-btn:active { background: var(--accent); }
+
+/* BOTTOM NAV */
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); display: flex; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px 4px 6px; cursor: pointer; transition: color 0.15s; color: var(--muted); border: none; background: none; font-family: var(--font); }
+.nav-item.active { color: var(--accent2); }
+.nav-icon { font-size: 22px; line-height: 1; }
+.nav-label { font-size: 10px; font-weight: 700; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.3px; }
+.nav-item.active .nav-icon { transform: translateY(-1px); }
+
+/* PAGES */
+.page { display: none; padding: 16px; animation: fadeIn 0.2s ease; }
+.page.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* CARDS */
+.card { background: var(--surface); border-radius: var(--card-radius); border: 1px solid var(--border); padding: 16px; margin-bottom: 12px; }
+.card-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+
+/* STAT GRID */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.stat-card { background: var(--surface); border-radius: 14px; border: 1px solid var(--border); padding: 14px 16px; }
+.stat-label { font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-value { font-size: 26px; font-weight: 900; color: var(--text); line-height: 1.1; margin-top: 4px; font-family: var(--mono); }
+.stat-value.green { color: var(--green); }
+.stat-value.amber { color: var(--amber); }
+.stat-value.red { color: var(--red); }
+.stat-value.accent { color: var(--accent2); }
+
+/* ALERTS */
+.alert { border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.alert-red { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+.alert-green { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.25); color: #86efac; }
+.alert-amber { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.25); color: #fcd34d; }
+
+/* STOCK LIST */
+.stock-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.stock-item:last-child { border-bottom: none; }
+.stock-name { font-size: 15px; font-weight: 700; }
+.stock-type { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.stock-qty { text-align: right; }
+.stock-avail { font-size: 18px; font-weight: 800; font-family: var(--mono); }
+.stock-avail.ok { color: var(--green); }
+.stock-avail.low { color: var(--amber); }
+.stock-avail.critical { color: var(--red); }
+.stock-rate { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* FORM INPUTS */
+.form-group { margin-bottom: 14px; }
+.form-label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.form-input { width: 100%; background: var(--surface2); border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 14px; color: var(--text); font-size: 15px; font-family: var(--font); outline: none; transition: border-color 0.15s; }
+.form-input:focus { border-color: var(--accent); }
+.form-select { width: 100%; background: var(--surface2); border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 14px; color: var(--text); font-size: 15px; font-family: var(--font); outline: none; appearance: none; }
+.form-select:focus { border-color: var(--accent); }
+
+/* SECTION HEADER */
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.section-title { font-size: 17px; font-weight: 800; }
+.badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; }
+.badge-accent { background: rgba(99,102,241,0.2); color: var(--accent2); }
+.badge-green { background: rgba(34,197,94,0.15); color: var(--green); }
+.badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
+.badge-amber { background: rgba(245,158,11,0.15); color: var(--amber); }
+
+/* BIG ACTION BUTTON */
+.action-btn { width: 100%; padding: 16px; border-radius: 14px; border: none; font-size: 16px; font-weight: 800; font-family: var(--font); cursor: pointer; transition: transform 0.1s, opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.action-btn:active { transform: scale(0.97); }
+.action-btn.primary { background: linear-gradient(135deg, var(--accent), #8b5cf6); color: white; }
+.action-btn.success { background: linear-gradient(135deg, #16a34a, var(--green)); color: white; }
+.action-btn.danger { background: linear-gradient(135deg, #dc2626, var(--red)); color: white; }
+
+/* TABLE-STYLE LIST */
+.data-row { display: grid; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: center; }
+.data-row:last-child { border-bottom: none; }
+.data-row input { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: var(--text); font-size: 14px; font-family: var(--font); width: 100%; outline: none; }
+.data-row input:focus { border-color: var(--accent); }
+
+/* COST SUMMARY */
+.cost-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.cost-row:last-child { border-bottom: none; }
+.cost-label { font-size: 14px; color: var(--muted); }
+.cost-value { font-size: 16px; font-weight: 800; font-family: var(--mono); color: var(--text); }
+.cost-total { background: rgba(99,102,241,0.15); border-radius: 12px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.cost-total-label { font-size: 15px; font-weight: 700; color: var(--accent2); }
+.cost-total-value { font-size: 22px; font-weight: 900; font-family: var(--mono); color: var(--accent2); }
+
+/* LOG ITEMS */
+.log-item { background: var(--surface); border-radius: 14px; border: 1px solid var(--border); padding: 14px; margin-bottom: 10px; }
+.log-date { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-bottom: 8px; }
+.log-formula { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
+.log-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+.log-chip { font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 700; }
+
+/* LOADING / EMPTY */
+.loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; color: var(--muted); gap: 12px; }
+.spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-text { font-size: 15px; font-weight: 600; }
+
+/* TOAST */
+.toast-container { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; width: calc(100% - 32px); max-width: 360px; }
+.toast { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); animation: toastIn 0.3s ease; }
+.toast.success { border-color: rgba(34,197,94,0.4); color: var(--green); }
+.toast.error { border-color: rgba(239,68,68,0.4); color: #fca5a5; }
+.toast.info { border-color: rgba(99,102,241,0.4); color: var(--accent2); }
+@keyframes toastIn { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* MODAL */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 500; display: none; align-items: flex-end; }
+.modal-overlay.open { display: flex; }
+.modal-sheet { background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px; width: 100%; max-height: 85vh; overflow-y: auto; animation: slideUp 0.25s ease; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+.modal-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+.modal-actions .action-btn { flex: 1; }
+.btn-ghost { padding: 14px; border-radius: 14px; border: 1.5px solid var(--border); font-size: 15px; font-weight: 700; font-family: var(--font); background: transparent; color: var(--muted); cursor: pointer; flex: 1; }
+
+/* TABS */
+.tab-row { display: flex; background: var(--surface2); border-radius: 12px; padding: 4px; margin-bottom: 16px; gap: 4px; }
+.tab-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; font-family: var(--font); cursor: pointer; background: transparent; color: var(--muted); transition: all 0.15s; }
+.tab-btn.active { background: var(--accent); color: white; }
+
+/* SETTINGS */
+.settings-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.settings-item:last-child { border-bottom: none; }
+.settings-label { font-size: 15px; font-weight: 600; }
+.settings-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.settings-value { font-size: 13px; color: var(--accent2); font-family: var(--mono); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="logo">🏭</div>
+  <h1>BatchPro</h1>
+  <p>Production Management System</p>
+  <div class="dots">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+</div>
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen">
+  <div class="setup-logo">⚙️</div>
+  <div class="setup-title">Initial Setup</div>
+  <div class="setup-sub">अपना Google Apps Script URL जोड़ें</div>
+
+  <div class="setup-steps">
+    <div class="setup-step">
+      <div class="setup-step-num">1</div>
+      <div class="setup-step-text">अपने Google Sheet में <strong>Code_AppScript.js</strong> का code पूरा paste करें</div>
+    </div>
+    <div class="setup-step">
+      <div class="setup-step-num">2</div>
+      <div class="setup-step-text"><strong>setupAllSheets()</strong> function एक बार run करें (sheets बन जाएंगी)</div>
+    </div>
+    <div class="setup-step">
+      <div class="setup-step-num">3</div>
+      <div class="setup-step-text"><strong>Deploy → New Deployment → Web App</strong> करें। Execute as: Me, Access: Anyone</div>
+    </div>
+    <div class="setup-step">
+      <div class="setup-step-num">4</div>
+      <div class="setup-step-text">Deploy होने के बाद मिला <strong>Web App URL</strong> नीचे paste करें</div>
+    </div>
+  </div>
+
+  <div class="url-input-wrap">
+    <label>Apps Script Web App URL</label>
+    <input type="url" id="setup-url-input" placeholder="https://script.google.com/macros/s/...">
+  </div>
+  <button class="btn-primary" onclick="saveSetup()">✅ Setup Complete — App शुरू करें</button>
+  <div style="height: 40px;"></div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal-sheet" id="modal-sheet">
+    <div class="modal-handle"></div>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">🏭 Dashboard</div>
+    <div class="topbar-actions">
+      <div class="icon-btn" id="refresh-btn" onclick="refreshCurrentPage()" title="Refresh">🔄</div>
+      <div class="icon-btn" onclick="showPage('settings')" title="Settings">⚙️</div>
+    </div>
+  </div>
+
+  <div id="page-area">
+
+    <!-- DASHBOARD PAGE -->
+    <div class="page active" id="page-dashboard">
+      <div id="dashboard-content">
+        <div class="loading"><div class="spinner"></div><span>Loading...</span></div>
+      </div>
+    </div>
+
+    <!-- RAW STOCK PAGE -->
+    <div class="page" id="page-raw">
+      <div id="raw-stock-content">
+        <div class="loading"><div class="spinner"></div><span>Loading...</span></div>
+      </div>
+    </div>
+
+    <!-- PACKING STOCK PAGE -->
+    <div class="page" id="page-pack">
+      <div id="pack-stock-content">
+        <div class="loading"><div class="spinner"></div><span>Loading...</span></div>
+      </div>
+    </div>
+
+    <!-- BATCH PRODUCTION PAGE -->
+    <div class="page" id="page-batch">
+      <div id="batch-content">
+        <div class="loading"><div class="spinner"></div><span>Loading...</span></div>
+      </div>
+    </div>
+
+    <!-- PRODUCTION LOG PAGE -->
+    <div class="page" id="page-log">
+      <div id="log-content">
+        <div class="loading"><div class="spinner"></div><span>Loading...</span></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <div class="page" id="page-settings">
+      <div class="card">
+        <div class="card-title">Connection Settings</div>
+        <div class="settings-item">
+          <div>
+            <div class="settings-label">Apps Script URL</div>
+            <div class="settings-desc">Your Google Sheet Web App URL</div>
+          </div>
+          <div class="settings-value" id="settings-url-display">Not set</div>
+        </div>
+        <button class="action-btn primary" style="margin-top:12px" onclick="openChangeUrl()">🔗 URL बदलें</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Telegram Settings</div>
+        <div class="form-group">
+          <label class="form-label">Bot Token</label>
+          <input type="text" id="settings-token" class="form-input" placeholder="Bot Token यहाँ डालें">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Chat ID</label>
+          <input type="text" id="settings-chatid" class="form-input" placeholder="Chat ID यहाँ डालें">
+        </div>
+        <button class="action-btn success" onclick="saveTelegramSettings()">💾 Save Telegram Settings</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Quick Actions</div>
+        <button class="action-btn" style="background: var(--surface2); border: 1px solid var(--border); color: var(--text); margin-bottom: 8px;" onclick="testConnection()">🔌 Connection Test करें</button>
+        <button class="action-btn danger" onclick="resetApp()">🗑️ App Reset करें</button>
+      </div>
+      <div style="text-align:center; color: var(--muted); font-size: 12px; padding: 16px;">BatchPro v1.0 • Batch Production Manager</div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">
+      <div class="nav-icon">🏠</div>
+      <div class="nav-label">Home</div>
+    </button>
+    <button class="nav-item" id="nav-raw" onclick="showPage('raw')">
+      <div class="nav-icon">🧪</div>
+      <div class="nav-label">Raw</div>
+    </button>
+    <button class="nav-item" id="nav-pack" onclick="showPage('pack')">
+      <div class="nav-icon">📦</div>
+      <div class="nav-label">Pack</div>
+    </button>
+    <button class="nav-item" id="nav-batch" onclick="showPage('batch')">
+      <div class="nav-icon">⚙️</div>
+      <div class="nav-label">Batch</div>
+    </button>
+    <button class="nav-item" id="nav-log" onclick="showPage('log')">
+      <div class="nav-icon">📋</div>
+      <div class="nav-label">Log</div>
+    </button>
+  </nav>
+</div>
+
+<script>
+// ==========================================
+// STATE
+// ==========================================
+var STATE = {
+  currentPage: 'dashboard',
+  scriptUrl: '',
+  telegramToken: '',
+  telegramChatId: '',
+  labourCost: 0,
+  formulas: [],
+  formulaData: {},
+  selectedFormula: '',
+  batchSize: 40,
+  stdBatch: 100,
+  packSize: 1,
+  rawItems: [],
+  packItems: [],
+  packingUsage: {}
+};
+
+// ==========================================
+// INIT
+// ==========================================
+window.addEventListener('load', function() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+  loadSettings();
+  setTimeout(init, 1200);
+});
+
+function loadSettings() {
+  STATE.scriptUrl = localStorage.getItem('scriptUrl') || '';
+  STATE.telegramToken = localStorage.getItem('telegramToken') || '';
+  STATE.telegramChatId = localStorage.getItem('telegramChatId') || '';
+  STATE.labourCost = parseFloat(localStorage.getItem('labourCost') || '0');
+}
+
+function init() {
+  document.getElementById('splash').style.opacity = '0';
+  setTimeout(function() {
+    document.getElementById('splash').style.display = 'none';
+    if (!STATE.scriptUrl) {
+      document.getElementById('setup-screen').style.display = 'flex';
+    } else {
+      document.getElementById('app').style.display = 'flex';
+      loadPage('dashboard');
+      updateSettingsDisplay();
+    }
+  }, 400);
+}
+
+// ==========================================
+// SETUP
+// ==========================================
+function saveSetup() {
+  var url = document.getElementById('setup-url-input').value.trim();
+  if (!url || !url.includes('script.google.com')) {
+    showToast('❌ Valid URL डालें', 'error');
+    return;
+  }
+  localStorage.setItem('scriptUrl', url);
+  STATE.scriptUrl = url;
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  loadPage('dashboard');
+  updateSettingsDisplay();
+  showToast('✅ Connected!', 'success');
+}
+
+// ==========================================
+// NAVIGATION
+// ==========================================
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('nav-' + page).classList.add('active');
+  var titles = { dashboard: '🏭 Dashboard', raw: '🧪 Raw Stock', pack: '📦 Packing Stock', batch: '⚙️ Batch Production', log: '📋 Production Log', settings: '⚙️ Settings' };
+  document.getElementById('topbar-title').textContent = titles[page] || 'BatchPro';
+  STATE.currentPage = page;
+  if (page !== 'settings') loadPage(page);
+}
+
+function refreshCurrentPage() {
+  if (STATE.currentPage !== 'settings') loadPage(STATE.currentPage);
+}
+
+function loadPage(page) {
+  if (page === 'dashboard') loadDashboard();
+  else if (page === 'raw') loadStock('raw');
+  else if (page === 'pack') loadStock('pack');
+  else if (page === 'batch') loadBatchPage();
+  else if (page === 'log') loadLog();
+}
+
+// ==========================================
+// API CALLS
+// ==========================================
+function apiCall(action, body, callback) {
+  if (!STATE.scriptUrl) {
+    showToast('❌ Script URL not set!', 'error');
+    return;
+  }
+  var url = STATE.scriptUrl + '?action=' + action;
+  var opts = { method: 'GET' };
+  if (body) {
+    body.action = action;
+    opts = { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } };
+    url = STATE.scriptUrl;
+  }
+  fetch(url, opts)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) { showToast('❌ ' + data.error, 'error'); callback && callback(null); }
+      else callback && callback(data);
+    })
+    .catch(function(e) {
+      showToast('❌ Network error. Check connection.', 'error');
+      callback && callback(null);
+    });
+}
+
+// ==========================================
+// DASHBOARD
+// ==========================================
+function loadDashboard() {
+  var el = document.getElementById('dashboard-content');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading...</span></div>';
+  apiCall('getDashboardData', null, function(data) {
+    if (!data) return;
+    var lowAlerts = '';
+    if (data.rawLowStock > 0 || data.packLowStock > 0) {
+      lowAlerts = '<div class="alert alert-red">⚠️ Low Stock: ' + (data.rawLowStock + data.packLowStock) + ' items below minimum level!</div>';
+    } else {
+      lowAlerts = '<div class="alert alert-green">✅ सभी stocks safe level पर हैं</div>';
+    }
+
+    el.innerHTML = lowAlerts +
+      '<div class="stat-grid">' +
+        '<div class="stat-card">' +
+          '<div class="stat-label">आज के Batches</div>' +
+          '<div class="stat-value accent">' + data.todayBatches + '</div>' +
+        '</div>' +
+        '<div class="stat-card">' +
+          '<div class="stat-label">आज के Packs</div>' +
+          '<div class="stat-value green">' + data.todayPacks + '</div>' +
+        '</div>' +
+        '<div class="stat-card">' +
+          '<div class="stat-label">आज की Cost</div>' +
+          '<div class="stat-value amber">₹' + parseFloat(data.todayCost).toLocaleString('en-IN') + '</div>' +
+        '</div>' +
+        '<div class="stat-card">' +
+          '<div class="stat-label">Low Stock Items</div>' +
+          '<div class="stat-value ' + ((data.rawLowStock + data.packLowStock) > 0 ? 'red' : 'green') + '">' + (data.rawLowStock + data.packLowStock) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="card">' +
+        '<div class="card-title">Quick Actions</div>' +
+        '<button class="action-btn primary" style="margin-bottom: 10px" onclick="showPage(\'batch\')">⚙️ नया Batch Start करें</button>' +
+        '<button class="action-btn" style="background: var(--surface2); border: 1px solid var(--border); color: var(--text); margin-bottom: 10px" onclick="showPage(\'raw\')">🧪 Raw Stock देखें</button>' +
+        '<button class="action-btn" style="background: var(--surface2); border: 1px solid var(--border); color: var(--text);" onclick="showPage(\'log\')">📋 Production Log</button>' +
+      '</div>';
+  });
+}
+
+// ==========================================
+// STOCK (RAW + PACKING)
+// ==========================================
+function loadStock(type) {
+  var action = type === 'raw' ? 'getRawStock' : 'getPackingStock';
+  var contentId = type === 'raw' ? 'raw-stock-content' : 'pack-stock-content';
+  var sheetName = type === 'raw' ? 'Raw_Stock' : 'Packing_Stock';
+  var el = document.getElementById(contentId);
+  el.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading...</span></div>';
+
+  apiCall(action, null, function(data) {
+    if (!data) return;
+    var items = data.items || [];
+
+    if (items.length === 0) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No items found.<br>Google Sheet में data add करें।</div></div>';
+      return;
+    }
+
+    var lowItems = items.filter(function(i) { return i.minLevel > 0 && i.available <= i.minLevel; });
+    var alertHtml = lowItems.length > 0
+      ? '<div class="alert alert-amber">⚠️ ' + lowItems.length + ' items low stock में हैं</div>'
+      : '<div class="alert alert-green">✅ All stock levels OK</div>';
+
+    var listHtml = items.map(function(item) {
+      var status = item.minLevel > 0 && item.available <= item.minLevel ? (item.available <= 0 ? 'critical' : 'low') : 'ok';
+      var statusLabel = status === 'critical' ? '🔴 Critical' : (status === 'low' ? '🟡 Low' : '');
+      return '<div class="stock-item">' +
+        '<div>' +
+          '<div class="stock-name">' + item.name + '</div>' +
+          '<div class="stock-type">' + (item.type || 'General') + (statusLabel ? ' • <span style="color:' + (status==='critical'?'var(--red)':'var(--amber)') + '">' + statusLabel + '</span>' : '') + '</div>' +
+        '</div>' +
+        '<div class="stock-qty">' +
+          '<div class="stock-avail ' + status + '">' + item.available.toFixed(2) + '</div>' +
+          '<div class="stock-rate">₹' + item.rate.toFixed(2) + '/unit</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    el.innerHTML = alertHtml +
+      '<div class="section-header">' +
+        '<div class="section-title">' + (type === 'raw' ? 'Raw Materials' : 'Packing Items') + '</div>' +
+        '<div class="badge badge-accent">' + items.length + ' items</div>' +
+      '</div>' +
+      '<div class="card">' + listHtml + '</div>' +
+      '<button class="action-btn success" onclick="openAddStockModal(\'' + sheetName + '\', ' + JSON.stringify(items).replace(/'/g,"&#39;") + ')">➕ Stock जोड़ें</button>';
+  });
+}
+
+// ==========================================
+// ADD STOCK MODAL
+// ==========================================
+function openAddStockModal(sheetName, items) {
+  var html = '<div class="modal-title">➕ ' + sheetName.replace('_', ' ') + '</div>' +
+    '<p style="font-size:13px;color:var(--muted);margin-bottom:16px">जिस item में stock जोड़नी हो, उसकी Qty और Rate डालें</p>';
+
+  html += '<div id="add-stock-list">';
+  items.forEach(function(item, idx) {
+    html += '<div class="data-row" style="grid-template-columns: 1fr 80px 80px; align-items: center;">' +
+      '<div style="font-size:14px;font-weight:700">' + item.name + '<br><span style="font-size:11px;color:var(--muted)">' + item.available.toFixed(1) + ' available</span></div>' +
+      '<input type="number" placeholder="Qty" id="qty-' + idx + '" min="0" style="text-align:center">' +
+      '<input type="number" placeholder="Rate" id="rate-' + idx + '" min="0" style="text-align:center">' +
+    '</div>';
+  });
+  html += '</div>';
+
+  html += '<div class="modal-actions">' +
+    '<button class="btn-ghost" onclick="closeModal()">Cancel</button>' +
+    '<button class="action-btn success" onclick="submitAddStock(\'' + sheetName + '\',' + JSON.stringify(items).replace(/'/g,"&#39;") + ')">✅ Add Stock</button>' +
+  '</div>';
+
+  openModal(html);
+}
+
+function submitAddStock(sheetName, items) {
+  var updates = [];
+  items.forEach(function(item, idx) {
+    var qtyEl = document.getElementById('qty-' + idx);
+    var rateEl = document.getElementById('rate-' + idx);
+    var qty = parseFloat(qtyEl ? qtyEl.value : 0) || 0;
+    var rate = parseFloat(rateEl ? rateEl.value : 0) || 0;
+    if (qty > 0) updates.push({ row: item.row, newQty: qty, newRate: rate });
+  });
+
+  if (updates.length === 0) {
+    showToast('⚠️ कोई quantity नहीं डाली', 'error');
+    return;
+  }
+
+  closeModal();
+  showToast('⏳ Updating stock...', 'info');
+  apiCall('addStock', { sheetName: sheetName, updates: updates }, function(data) {
+    if (!data) return;
+    showToast('✅ ' + data.updated + ' items updated!', 'success');
+    setTimeout(function() { loadStock(sheetName === 'Raw_Stock' ? 'raw' : 'pack'); }, 500);
+  });
+}
+
+// ==========================================
+// BATCH PRODUCTION PAGE
+// ==========================================
+var batchState = {
+  formulas: [],
+  formulaData: {},
+  rawStockMap: {},
+  packConfig: {},
+  labourCost: 0,
+  packItems: []
+};
+
+function loadBatchPage() {
+  var el = document.getElementById('batch-content');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading...</span></div>';
+
+  var loaded = 0;
+  function checkDone() {
+    loaded++;
+    if (loaded >= 3) renderBatchPage();
+  }
+
+  apiCall('getFormulas', null, function(data) {
+    if (data) {
+      batchState.formulas = data.formulas || [];
+      batchState.formulaData = data.formulaData || {};
+    }
+    checkDone();
+  });
+
+  apiCall('getRawStock', null, function(data) {
+    if (data) {
+      batchState.rawStockMap = {};
+      (data.items || []).forEach(function(i) { batchState.rawStockMap[i.name] = i; });
+    }
+    checkDone();
+  });
+
+  apiCall('getBatchData', null, function(data) {
+    if (data) {
+      batchState.labourCost = data.labourCost || 0;
+      batchState.packItems = data.packItems || [];
+      if (data.botToken) { STATE.telegramToken = data.botToken; localStorage.setItem('telegramToken', data.botToken); }
+      if (data.chatId) { STATE.telegramChatId = data.chatId; localStorage.setItem('telegramChatId', data.chatId); }
+    }
+    checkDone();
+  });
+}
+
+function renderBatchPage() {
+  var el = document.getElementById('batch-content');
+  if (batchState.formulas.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🧪</div><div class="empty-text">Formula_Master sheet में<br>कोई formula नहीं मिला।</div></div>';
+    return;
+  }
+
+  var formulaOptions = batchState.formulas.map(function(f) {
+    return '<option value="' + f + '">' + f + '</option>';
+  }).join('');
+
+  el.innerHTML =
+    '<div class="card">' +
+      '<div class="card-title">Formula & Batch Settings</div>' +
+      '<div class="form-group">' +
+        '<label class="form-label">Formula चुनें</label>' +
+        '<select class="form-select" id="batch-formula" onchange="updateBatchCalc()">' + formulaOptions + '</select>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+        '<div class="form-group">' +
+          '<label class="form-label">Batch Size (kg)</label>' +
+          '<input type="number" class="form-input" id="batch-size" value="40" min="1" oninput="updateBatchCalc()">' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label class="form-label">Pack Size (kg/L)</label>' +
+          '<input type="number" class="form-input" id="pack-size" value="1" min="0.001" step="0.001" oninput="updateBatchCalc()">' +
+        '</div>' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label class="form-label">Labour Charge (₹)</label>' +
+        '<input type="number" class="form-input" id="batch-labour" value="' + batchState.labourCost + '" min="0" oninput="updateBatchCalc()">' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="card" id="batch-raw-card">' +
+      '<div class="card-title">🧪 Raw Material Calculation</div>' +
+      '<div id="batch-raw-list"><div class="loading"><div class="spinner"></div></div></div>' +
+    '</div>' +
+
+    '<div class="card" id="batch-pack-card">' +
+      '<div class="card-title">📦 Packing Material</div>' +
+      '<div id="batch-pack-list"><div style="color:var(--muted);font-size:14px">Batch size set करें, फिर quantities भरें</div></div>' +
+    '</div>' +
+
+    '<div class="card" id="batch-cost-card">' +
+      '<div class="card-title">💰 Cost Summary</div>' +
+      '<div id="batch-cost-summary"></div>' +
+    '</div>' +
+
+    '<button class="action-btn primary" id="batch-submit-btn" onclick="confirmBatch()" style="margin-bottom:20px">🚀 Batch Process करें</button>';
+
+  updateBatchCalc();
+}
+
+function updateBatchCalc() {
+  var formulaEl = document.getElementById('batch-formula');
+  var batchSizeEl = document.getElementById('batch-size');
+  var packSizeEl = document.getElementById('batch-size');
+  if (!formulaEl) return;
+
+  var formula = formulaEl.value;
+  var batchSize = parseFloat(document.getElementById('batch-size').value) || 40;
+  var packSize = parseFloat(document.getElementById('pack-size').value) || 1;
+  var labour = parseFloat(document.getElementById('batch-labour').value) || 0;
+  var stdBatch = 100;
+
+  var formulaMaterials = batchState.formulaData[formula] || {};
+  var rawListEl = document.getElementById('batch-raw-list');
+  var packListEl = document.getElementById('batch-pack-list');
+  var costEl = document.getElementById('batch-cost-summary');
+
+  var materialCost = 0;
+  var rawRows = '';
+  var keys = Object.keys(formulaMaterials);
+
+  if (keys.length === 0) {
+    rawListEl.innerHTML = '<div style="color:var(--muted);font-size:14px">इस formula में कोई raw material नहीं मिला।</div>';
+  } else {
+    keys.forEach(function(name) {
+      var stdQty = formulaMaterials[name];
+      var reqQty = (stdQty * batchSize) / stdBatch;
+      var stockInfo = batchState.rawStockMap[name] || {};
+      var rate = stockInfo.rate || 0;
+      var available = stockInfo.available || 0;
+      var cost = reqQty * rate;
+      materialCost += cost;
+      var sufficient = available >= reqQty;
+      rawRows += '<div class="data-row" style="grid-template-columns:1fr 70px 70px 70px">' +
+        '<div style="font-size:13px;font-weight:700">' + name + '<br><span style="font-size:11px;color:' + (sufficient ? 'var(--green)' : 'var(--red)') + '">' + available.toFixed(1) + ' avail</span></div>' +
+        '<div style="text-align:center;font-size:14px;font-family:var(--mono)"><span style="color:var(--muted);font-size:11px">REQ</span><br>' + reqQty.toFixed(2) + '</div>' +
+        '<div style="text-align:center;font-size:13px;color:var(--muted)">₹' + rate.toFixed(1) + '</div>' +
+        '<div style="text-align:right;font-size:13px;font-weight:700;color:var(--amber)">₹' + cost.toFixed(1) + '</div>' +
+      '</div>';
+    });
+    rawListEl.innerHTML = rawRows;
+  }
+
+  // Packing
+  var totalPacks = packSize > 0 ? Math.floor(batchSize / packSize) : 0;
+  var packCost = 0;
+  var packRows = '';
+
+  batchState.packItems.forEach(function(item, idx) {
+    var usageEl = document.getElementById('pack-usage-' + idx);
+    var usageQty = usageEl ? (parseFloat(usageEl.value) || 0) : 0;
+    var reqQty = totalPacks * usageQty;
+    var cost = reqQty * item.rate;
+    packCost += cost;
+    packRows += '<div class="data-row" style="grid-template-columns:1fr 80px">' +
+      '<div style="font-size:13px;font-weight:700">' + item.name + '<br><span style="font-size:11px;color:var(--muted)">Avail: ' + item.available.toFixed(1) + ' | ₹' + item.rate.toFixed(1) + '/unit</span></div>' +
+      '<input type="number" id="pack-usage-' + idx + '" placeholder="per pack" min="0" step="0.001" style="text-align:center" oninput="updateBatchCalc()" ' + (usageEl ? 'value="' + usageEl.value + '"' : '') + '>' +
+    '</div>';
+  });
+
+  packListEl.innerHTML = packRows || '<div style="color:var(--muted);font-size:14px">Packing items Sheet में add करें।</div>';
+
+  var grandTotal = materialCost + packCost + labour;
+  var perUnit = totalPacks > 0 ? grandTotal / totalPacks : 0;
+
+  costEl.innerHTML =
+    '<div class="cost-row"><div class="cost-label">Total Packs</div><div class="cost-value">' + totalPacks + ' units</div></div>' +
+    '<div class="cost-row"><div class="cost-label">Material Cost</div><div class="cost-value">₹' + materialCost.toFixed(2) + '</div></div>' +
+    '<div class="cost-row"><div class="cost-label">Packing Cost</div><div class="cost-value">₹' + packCost.toFixed(2) + '</div></div>' +
+    '<div class="cost-row"><div class="cost-label">Labour Cost</div><div class="cost-value">₹' + labour.toFixed(2) + '</div></div>' +
+    '<div class="cost-total"><div class="cost-total-label">Grand Total</div><div class="cost-total-value">₹' + grandTotal.toFixed(2) + '</div></div>' +
+    '<div class="cost-total" style="margin-top:8px;background:rgba(34,197,94,0.1)"><div class="cost-total-label" style="color:var(--green)">Per Unit Cost</div><div class="cost-total-value" style="color:var(--green)">₹' + perUnit.toFixed(2) + '</div></div>';
+
+  // Store for submission
+  window._batchCalc = {
+    formula: formula, batchSize: batchSize, packSize: packSize,
+    totalPacks: totalPacks, materialCost: materialCost,
+    packCost: packCost, labour: labour,
+    grandTotal: grandTotal, perUnit: perUnit
+  };
+}
+
+function confirmBatch() {
+  updateBatchCalc();
+  var c = window._batchCalc;
+  if (!c) return;
+
+  var formula = document.getElementById('batch-formula').value;
+  var batchSize = parseFloat(document.getElementById('batch-size').value) || 40;
+
+  var html = '<div class="modal-title">✅ Batch Confirm करें</div>' +
+    '<div class="card" style="margin-bottom:12px">' +
+      '<div class="cost-row"><div class="cost-label">Formula</div><div class="cost-value">' + c.formula + '</div></div>' +
+      '<div class="cost-row"><div class="cost-label">Batch Size</div><div class="cost-value">' + c.batchSize + ' kg</div></div>' +
+      '<div class="cost-row"><div class="cost-label">Total Packs</div><div class="cost-value">' + c.totalPacks + ' units</div></div>' +
+      '<div class="cost-row"><div class="cost-label">Grand Total</div><div class="cost-value" style="color:var(--accent2)">₹' + c.grandTotal.toFixed(2) + '</div></div>' +
+      '<div class="cost-row"><div class="cost-label">Per Unit</div><div class="cost-value" style="color:var(--green)">₹' + c.perUnit.toFixed(2) + '</div></div>' +
+    '</div>' +
+    '<div class="alert alert-amber">⚠️ यह action stock घटाएगा और Log में save होगा!</div>' +
+    '<div class="modal-actions">' +
+      '<button class="btn-ghost" onclick="closeModal()">Cancel</button>' +
+      '<button class="action-btn success" onclick="submitBatch()">🚀 Process!</button>' +
+    '</div>';
+
+  openModal(html);
+}
+
+function submitBatch() {
+  closeModal();
+  var c = window._batchCalc;
+  if (!c) return;
+
+  var formulaMaterials = batchState.formulaData[c.formula] || {};
+  var rawMaterials = [];
+  var stdBatch = 100;
+
+  Object.keys(formulaMaterials).forEach(function(name) {
+    var reqQty = (formulaMaterials[name] * c.batchSize) / stdBatch;
+    rawMaterials.push({ name: name, qty: reqQty });
+  });
+
+  var packMaterials = [];
+  batchState.packItems.forEach(function(item, idx) {
+    var usageEl = document.getElementById('pack-usage-' + idx);
+    var usage = usageEl ? (parseFloat(usageEl.value) || 0) : 0;
+    if (usage > 0) {
+      packMaterials.push({ name: item.name, qty: c.totalPacks * usage });
+    }
+  });
+
+  showToast('⏳ Processing batch...', 'info');
+
+  apiCall('processBatch', {
+    formulaName: c.formula,
+    batchSize: c.batchSize,
+    packSize: c.packSize,
+    totalPacks: c.totalPacks,
+    materialCost: c.materialCost.toFixed(2),
+    labourCost: c.labour.toFixed(2),
+    grandTotal: c.grandTotal.toFixed(2),
+    perUnitCost: c.perUnit.toFixed(2),
+    rawMaterials: rawMaterials,
+    packMaterials: packMaterials,
+    botToken: STATE.telegramToken,
+    chatId: STATE.telegramChatId
+  }, function(data) {
+    if (!data) return;
+    showToast('✅ Batch complete! ' + data.updated + ' materials updated', 'success');
+    setTimeout(function() { loadBatchPage(); }, 1000);
+  });
+}
+
+// ==========================================
+// PRODUCTION LOG
+// ==========================================
+function loadLog() {
+  var el = document.getElementById('log-content');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading...</span></div>';
+
+  apiCall('getProductionLog', null, function(data) {
+    if (!data) return;
+    var logs = data.logs || [];
+
+    if (logs.length === 0) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">अभी कोई production नहीं हुई।</div></div>';
+      return;
+    }
+
+    var html = '<div class="section-header"><div class="section-title">Production History</div><div class="badge badge-accent">' + logs.length + ' records</div></div>';
+    logs.forEach(function(log) {
+      var dateStr = log.date ? log.date.toString().substring(0, 19) : '';
+      html += '<div class="log-item">' +
+        '<div class="log-date">📅 ' + dateStr + '</div>' +
+        '<div class="log-formula">🧪 ' + log.formula + '</div>' +
+        '<div class="log-meta">' +
+          '<div class="log-chip badge-accent">⚖️ ' + log.batchSize + ' kg</div>' +
+          '<div class="log-chip badge-green">📦 ' + log.totalPacks + ' packs</div>' +
+          '<div class="log-chip badge-amber">💰 ₹' + parseFloat(log.grandTotal || 0).toFixed(0) + '</div>' +
+          '<div class="log-chip" style="background:rgba(34,197,94,0.15);color:var(--green)">Per: ₹' + parseFloat(log.perUnitCost || 0).toFixed(2) + '</div>' +
+        '</div>' +
+      '</div>';
+    });
+
+    el.innerHTML = html;
+  });
+}
+
+// ==========================================
+// SETTINGS
+// ==========================================
+function updateSettingsDisplay() {
+  var urlEl = document.getElementById('settings-url-display');
+  if (urlEl) urlEl.textContent = STATE.scriptUrl ? STATE.scriptUrl.substring(0, 40) + '...' : 'Not set';
+  var tokenEl = document.getElementById('settings-token');
+  var chatEl = document.getElementById('settings-chatid');
+  if (tokenEl) tokenEl.value = STATE.telegramToken || '';
+  if (chatEl) chatEl.value = STATE.telegramChatId || '';
+}
+
+function saveTelegramSettings() {
+  var token = document.getElementById('settings-token').value.trim();
+  var chatid = document.getElementById('settings-chatid').value.trim();
+  STATE.telegramToken = token;
+  STATE.telegramChatId = chatid;
+  localStorage.setItem('telegramToken', token);
+  localStorage.setItem('telegramChatId', chatid);
+  showToast('✅ Telegram settings saved!', 'success');
+}
+
+function openChangeUrl() {
+  var html = '<div class="modal-title">🔗 URL बदलें</div>' +
+    '<div class="form-group">' +
+      '<label class="form-label">New Apps Script URL</label>' +
+      '<input type="url" class="form-input" id="change-url-input" value="' + STATE.scriptUrl + '" placeholder="https://script.google.com/...">' +
+    '</div>' +
+    '<div class="modal-actions">' +
+      '<button class="btn-ghost" onclick="closeModal()">Cancel</button>' +
+      '<button class="action-btn primary" onclick="applyChangeUrl()">✅ Save</button>' +
+    '</div>';
+  openModal(html);
+}
+
+function applyChangeUrl() {
+  var url = document.getElementById('change-url-input').value.trim();
+  if (!url) return;
+  localStorage.setItem('scriptUrl', url);
+  STATE.scriptUrl = url;
+  closeModal();
+  updateSettingsDisplay();
+  showToast('✅ URL updated!', 'success');
+}
+
+function testConnection() {
+  showToast('⏳ Testing...', 'info');
+  apiCall('ping', null, function(data) {
+    if (data) showToast('✅ Connected: ' + data.message, 'success');
+  });
+}
+
+function resetApp() {
+  var html = '<div class="modal-title">🗑️ App Reset</div>' +
+    '<div class="alert alert-red">⚠️ यह सभी local settings delete करेगा! Google Sheet का data safe रहेगा।</div>' +
+    '<div class="modal-actions">' +
+      '<button class="btn-ghost" onclick="closeModal()">Cancel</button>' +
+      '<button class="action-btn danger" onclick="doReset()">Reset करें</button>' +
+    '</div>';
+  openModal(html);
+}
+
+function doReset() {
+  localStorage.clear();
+  closeModal();
+  setTimeout(function() { window.location.reload(); }, 300);
+}
+
+// ==========================================
+// MODAL
+// ==========================================
+function openModal(html) {
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+// ==========================================
+// TOAST
+// ==========================================
+function showToast(msg, type) {
+  type = type || 'info';
+  var container = document.getElementById('toast-container');
+  var toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(function() {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-10px)';
+    toast.style.transition = 'all 0.3s';
+    setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+  }, 3000);
+}
+</script>
+</body>
+</html>
